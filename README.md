@@ -1,6 +1,7 @@
 # spender 
 Spender - is opensource api for register spending of money and time
 
+## Project outline
 ## Resources
 ### Mongodb driver
 Documentation
@@ -22,6 +23,17 @@ https://echo.labstack.com/docs
 Installing echo framework
 ```
 go get github.com/labstack/echo/v4
+```
+
+### Air
+Documentation
+```
+https://github.com/cosmtrek/air/blob/master/README.md
+```
+
+Installing air framework
+```
+go install github.com/cosmtrek/air@latest
 ```
 
 ## Docker

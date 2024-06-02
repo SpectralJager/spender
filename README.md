@@ -2,6 +2,10 @@
 Spender - is opensource api for register spending of money and time
 
 ## Project outline
+- cmd -> command directory
+  - api -> api server main package
+- handlers -> api handle routes
+- types -> api models
 ## Resources
 ### Mongodb driver
 Documentation

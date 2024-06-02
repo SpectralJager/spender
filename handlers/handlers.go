@@ -1,22 +1,36 @@
 package handlers
 
 import (
+	"context"
 	"net/http"
 
-	"github.com/SpectralJager/spender/types"
+	"github.com/SpectralJager/spender/db"
 	"github.com/labstack/echo/v4"
 )
 
-func HandleGetUsers(ctx echo.Context) error {
-	users := []types.User{
-		{FirstName: "James", LastName: "Smith"},
-		{FirstName: "Charls", LastName: "Jonhson"},
-	}
-	return ctx.JSON(http.StatusOK, users)
+type UserHandler struct {
+	userStore db.UserStore
 }
 
-func HandleGetUser(ctx echo.Context) error {
-	return ctx.JSON(http.StatusOK, echo.Map{
-		"user": "James",
-	})
+func NewUserHandler(userStore db.UserStore) *UserHandler {
+	return &UserHandler{
+		userStore: userStore,
+	}
+}
+
+func (h UserHandler) GetUser(ctx echo.Context) error {
+	id := ctx.Param("id")
+	user, err := h.userStore.GetUserByID(context.TODO(), id)
+	if err != nil {
+		return err
+	}
+	return ctx.JSON(http.StatusOK, user)
+}
+
+func (h UserHandler) GetUsers(ctx echo.Context) error {
+	users, err := h.userStore.GetAllUsers(context.TODO())
+	if err != nil {
+		return err
+	}
+	return ctx.JSON(http.StatusOK, users)
 }

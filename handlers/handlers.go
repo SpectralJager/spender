@@ -44,8 +44,7 @@ func (h UserHandler) PostUser(ctx echo.Context) error {
 		return ctx.JSON(http.StatusInternalServerError, echo.Map{"error": err.Error()})
 	}
 	if errs := params.Validate(); errs != nil {
-		errStrs := ErrorsToStrings(errs)
-		return ctx.JSON(http.StatusInternalServerError, echo.Map{"validationErrors": errStrs})
+		return ctx.JSON(http.StatusInternalServerError, echo.Map{"validationErrors": errs})
 	}
 	user, err := types.NewUserFromParams(params)
 	if err != nil {
@@ -62,12 +61,4 @@ func DecodeBody[T any](r io.Reader) (T, error) {
 	var content T
 	err := json.NewDecoder(r).Decode(&content)
 	return content, err
-}
-
-func ErrorsToStrings(errors []error) []string {
-	strs := []string{}
-	for _, err := range errors {
-		strs = append(strs, err.Error())
-	}
-	return strs
 }

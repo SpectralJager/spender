@@ -28,28 +28,28 @@ type CreateUserParams struct {
 	Password  string `json:"password"`
 }
 
-func (p CreateUserParams) Validate() []error {
-	var errors []error
+func (p CreateUserParams) Validate() []string {
+	var errors []string
 	if len(p.FirstName) < minFirstNameLen {
-		errors = append(errors, fmt.Errorf("first name lenght should be at least %d characters", minFirstNameLen))
+		errors = append(errors, fmt.Sprintf("first name lenght should be at least %d characters", minFirstNameLen))
 	}
 	if len(p.FirstName) > maxFirstNameLen {
-		errors = append(errors, fmt.Errorf("first name lenght should be less or equal then %d characters", maxFirstNameLen))
+		errors = append(errors, fmt.Sprintf("first name lenght should be less or equal then %d characters", maxFirstNameLen))
 	}
 	if len(p.LastName) < minLastNameLen {
-		errors = append(errors, fmt.Errorf("last name lenght should be at least %d characters", maxLastNameLen))
+		errors = append(errors, fmt.Sprintf("last name lenght should be at least %d characters", maxLastNameLen))
 	}
 	if len(p.LastName) > maxLastNameLen {
-		errors = append(errors, fmt.Errorf("last name lenght should be less or equal then %d characters", maxLastNameLen))
+		errors = append(errors, fmt.Sprintf("last name lenght should be less or equal then %d characters", maxLastNameLen))
 	}
 	if len(p.Password) < minPasswordLen {
-		errors = append(errors, fmt.Errorf("password lenght should be at least %d characters", minPasswordLen))
+		errors = append(errors, fmt.Sprintf("password lenght should be at least %d characters", minPasswordLen))
 	}
 	if len(p.Password) > maxPasswordLen {
-		errors = append(errors, fmt.Errorf("password lenght should be less or equal then %d characters", maxPasswordLen))
+		errors = append(errors, fmt.Sprintf("password lenght should be less or equal then %d characters", maxPasswordLen))
 	}
 	if !emailRegex.MatchString(p.Email) {
-		errors = append(errors, fmt.Errorf("incorect email format"))
+		errors = append(errors, "incorect email format")
 	}
 	return errors
 }

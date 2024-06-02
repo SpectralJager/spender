@@ -17,6 +17,7 @@ const (
 type UserStore interface {
 	GetUserByID(context.Context, string) (*types.User, error)
 	GetAllUsers(context.Context) ([]*types.User, error)
+	CreateUser(context.Context, *types.User) error
 }
 
 func ToObjectID(id string) primitive.ObjectID {
@@ -53,13 +54,18 @@ func (st MongoUserStore) GetAllUsers(ctx context.Context) ([]*types.User, error)
 		return nil, err
 	}
 	users := []*types.User{}
-	for cur.Next(ctx) {
-		var user types.User
-		err := cur.Decode(&user)
-		if err != nil {
-			return nil, err
-		}
-		users = append(users, &user)
+	err = cur.All(ctx, &users)
+	if err != nil {
+		return nil, err
 	}
 	return users, nil
+}
+
+func (st MongoUserStore) CreateUser(ctx context.Context, user *types.User) error {
+	res, err := st.coll.InsertOne(ctx, user)
+	if err != nil {
+		return err
+	}
+	user.ID = res.InsertedID.(primitive.ObjectID).Hex()
+	return nil
 }

@@ -10,12 +10,13 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
-const (
-	DBNAME   = "spender"
-	USERCOLL = "users"
-)
+type StoreDropper interface {
+	Drop(context.Context) error
+}
 
 type UserStore interface {
+	StoreDropper
+
 	GetUserByID(context.Context, string) (types.User, error)
 	GetAllUsers(context.Context) ([]types.User, error)
 	CreateUser(context.Context, types.User) (string, error)
@@ -45,15 +46,17 @@ func toBsonDoc(v interface{}) (*bson.D, error) {
 }
 
 type MongoUserStore struct {
-	client *mongo.Client
-	coll   *mongo.Collection
+	coll *mongo.Collection
 }
 
-func NewMongoUserStore(cl *mongo.Client) *MongoUserStore {
+func NewMongoUserStore(cl *mongo.Client, dbname, userColl string) *MongoUserStore {
 	return &MongoUserStore{
-		client: cl,
-		coll:   cl.Database(DBNAME).Collection(USERCOLL),
+		coll: cl.Database(dbname).Collection(userColl),
 	}
+}
+
+func (st MongoUserStore) Drop(ctx context.Context) error {
+	return st.coll.Drop(ctx)
 }
 
 func (st MongoUserStore) GetUserByID(ctx context.Context, id string) (types.User, error) {

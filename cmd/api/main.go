@@ -14,7 +14,11 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
-const dburi = "mongodb://localhost:27017"
+const (
+	DBURI    = "mongodb://localhost:27017"
+	DBNAME   = "spender"
+	USERCOLL = "users"
+)
 
 func main() {
 	listenAddr := flag.String("addr", ":8080", "the listhen addres of api server")
@@ -22,13 +26,13 @@ func main() {
 
 	ctx := context.Background()
 
-	client, err := mongo.Connect(ctx, options.Client().ApplyURI(dburi))
+	client, err := mongo.Connect(ctx, options.Client().ApplyURI(DBURI))
 	if err != nil {
 		log.Fatal(err)
 	}
 	defer client.Disconnect(ctx)
 
-	userHandler := handlers.NewUserHandler(db.NewMongoUserStore(client))
+	userHandler := handlers.NewUserHandler(db.NewMongoUserStore(client, DBNAME, USERCOLL))
 
 	app := echo.New()
 	apiv1 := app.Group("/api/v1", middleware.Logger())

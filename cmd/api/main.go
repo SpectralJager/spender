@@ -35,6 +35,8 @@ func main() {
 	apiv1.GET("/user", userHandler.GetUsers)
 	apiv1.POST("/user", userHandler.PostUser)
 	apiv1.GET("/user/:id", userHandler.GetUser)
+	apiv1.PUT("/user/:id", userHandler.PutUser)
+	apiv1.DELETE("/user/:id", userHandler.DeleteUser)
 
 	// userHandler.InitHandlers(apiv1)
 

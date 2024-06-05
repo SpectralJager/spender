@@ -43,18 +43,42 @@ func (h UserHandler) PostUser(ctx echo.Context) error {
 	if err != nil {
 		return ctx.JSON(http.StatusInternalServerError, echo.Map{"error": err.Error()})
 	}
-	if errs := params.Validate(); errs != nil {
+	if errs := params.Validate(); len(errs) != 0 {
 		return ctx.JSON(http.StatusInternalServerError, echo.Map{"validationErrors": errs})
 	}
 	user, err := types.NewUserFromParams(params)
 	if err != nil {
 		return ctx.JSON(http.StatusInternalServerError, echo.Map{"error": err.Error()})
 	}
-	err = h.userStore.CreateUser(context.TODO(), user)
+	userID, err := h.userStore.CreateUser(context.TODO(), user)
 	if err != nil {
 		return ctx.JSON(http.StatusInternalServerError, echo.Map{"error": err.Error()})
 	}
-	return ctx.JSON(http.StatusOK, user)
+	return ctx.JSON(http.StatusOK, echo.Map{"resutl": "done", "id": userID})
+}
+
+func (h UserHandler) DeleteUser(ctx echo.Context) error {
+	userID := ctx.Param("id")
+	if err := h.userStore.DeleteUser(context.TODO(), userID); err != nil {
+		return ctx.JSON(http.StatusInternalServerError, echo.Map{"error": err.Error()})
+	}
+	return ctx.JSON(http.StatusOK, echo.Map{"resutl": "done", "id": userID})
+}
+
+func (h UserHandler) PutUser(ctx echo.Context) error {
+	params, err := DecodeBody[types.UpdateUserParams](ctx.Request().Body)
+	if err != nil {
+		return ctx.JSON(http.StatusInternalServerError, echo.Map{"error": err.Error()})
+	}
+	if errs := params.Validate(); len(errs) != 0 {
+		return ctx.JSON(http.StatusInternalServerError, echo.Map{"validationErrors": errs})
+	}
+	userID := ctx.Param("id")
+	err = h.userStore.UpdateUser(context.TODO(), userID, params)
+	if err != nil {
+		return ctx.JSON(http.StatusInternalServerError, echo.Map{"error": err.Error()})
+	}
+	return ctx.JSON(http.StatusOK, echo.Map{"resutl": "done", "id": userID})
 }
 
 func DecodeBody[T any](r io.Reader) (T, error) {

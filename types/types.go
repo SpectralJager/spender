@@ -7,7 +7,6 @@ import (
 
 	"github.com/SpectralJager/spender/utils"
 	"go.mongodb.org/mongo-driver/bson"
-	"golang.org/x/crypto/bcrypt"
 )
 
 const (
@@ -25,13 +24,13 @@ var (
 	emailRegex = regexp.MustCompile(`^[a-z0-9._%+\-]+@[a-z0-9.\-]+\.[a-z]{2,4}$`)
 )
 
-func EncryptPassword(password string) ([]byte, error) {
-	return bcrypt.GenerateFromPassword([]byte(password), bcryptCost)
-}
-
 type UpdateUserParams struct {
 	FirstName string `json:"firstName" bson:"firstName,omitempty"`
 	LastName  string `json:"lastName" bson:"lastName,omitempty"`
+}
+
+func (params UpdateUserParams) ToBsonDoc() (*bson.D, error) {
+	return utils.ToBsonDoc(params)
 }
 
 func (p UpdateUserParams) Validate() map[string]string {
@@ -97,7 +96,7 @@ type User struct {
 }
 
 func NewUserFromParams(params CreateUserParams) (User, error) {
-	encpw, err := EncryptPassword(params.Password)
+	encpw, err := utils.EncryptPassword(params.Password, bcryptCost)
 	if err != nil {
 		return User{}, err
 	}

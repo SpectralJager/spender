@@ -10,6 +10,7 @@ import (
 
 	"github.com/SpectralJager/spender/db"
 	"github.com/SpectralJager/spender/types"
+	"github.com/SpectralJager/spender/utils"
 	"github.com/labstack/echo/v4"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
@@ -118,7 +119,7 @@ func TestPostUser(t *testing.T) {
 			rec := httptest.NewRecorder()
 			ctx := app.NewContext(req, rec)
 			uh.PostUser(ctx)
-			res, err := DecodeBody[map[string]any](rec.Body)
+			res, err := utils.DecodeBody[map[string]any](rec.Body)
 			if err != nil {
 				t.Fatal(err)
 			}

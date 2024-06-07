@@ -1,8 +1,12 @@
 package utils
 
 import (
+	"encoding/json"
+	"io"
+
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
+	"golang.org/x/crypto/bcrypt"
 )
 
 func ToObjectID(id string) primitive.ObjectID {
@@ -24,4 +28,14 @@ func ToBsonDoc(v any) (*bson.D, error) {
 		return nil, err
 	}
 	return doc, nil
+}
+
+func EncryptPassword(password string, cost int) ([]byte, error) {
+	return bcrypt.GenerateFromPassword([]byte(password), cost)
+}
+
+func DecodeBody[T any](r io.Reader) (T, error) {
+	var content T
+	err := json.NewDecoder(r).Decode(&content)
+	return content, err
 }

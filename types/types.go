@@ -3,12 +3,14 @@ package types
 import (
 	"fmt"
 	"regexp"
+	"time"
 
 	"golang.org/x/crypto/bcrypt"
 )
 
 const (
-	bcryptCost      = 10
+	bcryptCost = 10
+
 	minFirstNameLen = 2
 	maxFirstNameLen = 24
 	minLastNameLen  = 2
@@ -20,6 +22,10 @@ const (
 var (
 	emailRegex = regexp.MustCompile(`^[a-z0-9._%+\-]+@[a-z0-9.\-]+\.[a-z]{2,4}$`)
 )
+
+func EncryptPassword(password string) ([]byte, error) {
+	return bcrypt.GenerateFromPassword([]byte(password), bcryptCost)
+}
 
 type UpdateUserParams struct {
 	FirstName string `json:"firstName" bson:"firstName,omitempty"`
@@ -101,6 +107,52 @@ func NewUserFromParams(params CreateUserParams) (User, error) {
 	}, nil
 }
 
-func EncryptPassword(password string) ([]byte, error) {
-	return bcrypt.GenerateFromPassword([]byte(password), bcryptCost)
+type CreateTimespendParams struct {
+	Duration time.Duration `json:"duration"`
+	Note     string        `json:"note"`
+	Date     time.Time     `json:"date"`
+}
+
+func (params CreateTimespendParams) Validate() map[string]string {
+	errors := map[string]string{}
+	if params.Date.IsZero() {
+		errors["date"] = "date should be zero"
+	}
+	if params.Duration < time.Second {
+		errors["duration"] = "duration should be more then 1 second"
+	}
+	return errors
+}
+
+type UpdateTimespendParams struct {
+	Duration time.Duration `bson:"duration,omitempty" json:"duration"`
+	Date     time.Time     `bson:"date,omitempty" json:"date"`
+	Note     string        `bson:"note,omitempty" json:"note"`
+}
+
+func (params UpdateTimespendParams) Validate() map[string]string {
+	errors := map[string]string{}
+	if params.Date.IsZero() {
+		errors["date"] = "date should be zero"
+	}
+	if params.Duration < time.Second {
+		errors["duration"] = "duration should be more then 1 second"
+	}
+	return errors
+}
+
+type Timespend struct {
+	ID       string        `bson:"_id,omitempty" json:"id,omitempty"`
+	OwnerID  string        `bson:"ownerid,omitempty" json:"ownerid,omitempty"`
+	Duration time.Duration `bson:"duration" json:"duration"`
+	Date     time.Time     `bson:"date" json:"date"`
+	Note     string        `bson:"note" json:"note"`
+}
+
+func NewTimespendFromParams(params CreateTimespendParams) Timespend {
+	return Timespend{
+		Duration: params.Duration,
+		Date:     params.Date,
+		Note:     params.Note,
+	}
 }

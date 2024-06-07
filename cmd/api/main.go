@@ -15,9 +15,10 @@ import (
 )
 
 const (
-	DBURI    = "mongodb://localhost:27017"
-	DBNAME   = "spender"
-	USERCOLL = "users"
+	DBURI         = "mongodb://localhost:27017"
+	DBNAME        = "spender"
+	USERCOLL      = "users"
+	TIMESPENDCOLL = "timespends"
 )
 
 func main() {
@@ -33,14 +34,24 @@ func main() {
 	defer client.Disconnect(ctx)
 
 	userHandler := handlers.NewUserHandler(db.NewMongoUserStore(client, DBNAME, USERCOLL))
+	timespendHandler := handlers.NewTimespendHandler(db.NewMongoTimespendStore(client, DBNAME, TIMESPENDCOLL))
 
 	app := echo.New()
 	apiv1 := app.Group("/api/v1", middleware.Logger())
+	// User api
 	apiv1.GET("/user", userHandler.GetUsers)
 	apiv1.POST("/user", userHandler.PostUser)
 	apiv1.GET("/user/:id", userHandler.GetUser)
 	apiv1.PUT("/user/:id", userHandler.PutUser)
 	apiv1.DELETE("/user/:id", userHandler.DeleteUser)
+	// Time api
+	apiv1.GET("/timespend", timespendHandler.GetAllTimes)
+	apiv1.POST("/timespend", timespendHandler.PostTimespend)
+	apiv1.GET("/timespend/:id", timespendHandler.GetTimespend)
+	apiv1.PUT("/timespend/:id", timespendHandler.PutTimespend)
+	apiv1.DELETE("/timespend/:id", timespendHandler.DeleteTimespend)
+
+	// Money api
 
 	// userHandler.InitHandlers(apiv1)
 

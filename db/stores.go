@@ -10,18 +10,30 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
-type StoreDropper interface {
-	Drop(context.Context) error
+type Dropper interface {
+	Drop(ctx context.Context) error
 }
 
 type UserStore interface {
-	StoreDropper
+	Dropper
 
-	GetUserByID(context.Context, string) (types.User, error)
-	GetAllUsers(context.Context) ([]types.User, error)
-	CreateUser(context.Context, types.User) (string, error)
-	DeleteUser(context.Context, string) error
-	UpdateUser(context.Context, string, types.UpdateUserParams) error
+	GetAllUsers(ctx context.Context) ([]types.User, error)
+
+	GetUserByID(ctx context.Context, id string) (types.User, error)
+	CreateUser(ctx context.Context, user types.User) (string, error)
+	DeleteUser(ctx context.Context, id string) error
+	UpdateUser(ctx context.Context, id string, params types.UpdateUserParams) error
+}
+
+type TimespendStore interface {
+	Dropper
+
+	GetAllTimes(ctx context.Context, ownerID string) ([]types.Timespend, error)
+
+	CreateTimespend(ctx context.Context, timespend types.Timespend) (string, error)
+	GetTimespendByID(ctx context.Context, ownerid, id string) (types.Timespend, error)
+	DeleteTimespend(ctx context.Context, ownerid, id string) error
+	UpdateTimespend(ctx context.Context, ownerid, id string, params types.UpdateTimespendParams) error
 }
 
 func ToObjectID(id string) primitive.ObjectID {
@@ -32,7 +44,7 @@ func ToObjectID(id string) primitive.ObjectID {
 	return oid
 }
 
-func toBsonDoc(v interface{}) (*bson.D, error) {
+func toBsonDoc(v any) (*bson.D, error) {
 	data, err := bson.Marshal(v)
 	if err != nil {
 		return nil, err
@@ -111,6 +123,78 @@ func (st MongoUserStore) UpdateUser(ctx context.Context, id string, user types.U
 	}
 	if res.ModifiedCount <= 0 || res.MatchedCount <= 0 {
 		return fmt.Errorf("no changes for user with id = %s", id)
+	}
+	return nil
+}
+
+type MongoTimespendStore struct {
+	coll *mongo.Collection
+}
+
+func NewMongoTimespendStore(cl *mongo.Client, dbname, timespendColl string) *MongoTimespendStore {
+	return &MongoTimespendStore{
+		coll: cl.Database(dbname).Collection(timespendColl),
+	}
+}
+
+func (st MongoTimespendStore) Drop(ctx context.Context) error {
+	return st.coll.Drop(ctx)
+}
+
+func (st MongoTimespendStore) GetAllTimes(ctx context.Context, ownerID string) ([]types.Timespend, error) {
+	cur, err := st.coll.Find(ctx, bson.M{"ownerid": ownerID})
+	if err != nil {
+		return nil, err
+	}
+	times := []types.Timespend{}
+	err = cur.All(ctx, &times)
+	if err != nil {
+		return nil, err
+	}
+	return times, nil
+}
+
+func (st MongoTimespendStore) CreateTimespend(ctx context.Context, timepend types.Timespend) (string, error) {
+	res, err := st.coll.InsertOne(ctx, timepend)
+	if err != nil {
+		return "", err
+	}
+	return res.InsertedID.(primitive.ObjectID).Hex(), nil
+}
+
+func (st MongoTimespendStore) GetTimespendByID(ctx context.Context, ownerid, id string) (types.Timespend, error) {
+	var timespend types.Timespend
+	if err := st.coll.FindOne(ctx, bson.M{"_id": ToObjectID(id), "ownerid": ownerid}).Decode(&timespend); err != nil {
+		return types.Timespend{}, err
+	}
+	return timespend, nil
+}
+
+func (st MongoTimespendStore) DeleteTimespend(ctx context.Context, ownerid, id string) error {
+	res, err := st.coll.DeleteOne(ctx, bson.M{"_id": ToObjectID(id), "ownerid": ownerid})
+	if err != nil {
+		return err
+	}
+	if res.DeletedCount <= 0 {
+		return fmt.Errorf("can't delete timepend with id: %s", id)
+	}
+	return nil
+}
+
+func (st MongoTimespendStore) UpdateTimespend(ctx context.Context, ownerid, id string, params types.UpdateTimespendParams) error {
+	paramsBson, err := toBsonDoc(params)
+	if err != nil {
+		return err
+	}
+	res, err := st.coll.UpdateOne(ctx, bson.M{"_id": ToObjectID(id), "ownerid": ownerid}, bson.D{{Key: "$set", Value: paramsBson}})
+	if err != nil {
+		return err
+	}
+	if res.MatchedCount <= 0 {
+		return fmt.Errorf("can't update timespend with id: %s", id)
+	}
+	if res.ModifiedCount <= 0 {
+		return fmt.Errorf("no changes timespend with id: %s", id)
 	}
 	return nil
 }

@@ -6,6 +6,8 @@ Spender - is opensource api for register spending of money and time
   - api -> api server main package
 - handlers -> api handle routes
 - types -> api models
+- db -> store api and realisation
+- utils -> usefull functions
 ## Resources
 ### Mongodb driver
 Documentation
@@ -42,6 +44,12 @@ go install github.com/cosmtrek/air@latest
 
 ## Docker
 ### Load mongodb as docker container
+pull and run container
 ```
 docker run --name spender-mongo -d mongo:latest -p 27017:27017
+```
+
+run container
+```
+docker start spender-mongo
 ```

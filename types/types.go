@@ -5,6 +5,8 @@ import (
 	"regexp"
 	"time"
 
+	"github.com/SpectralJager/spender/utils"
+	"go.mongodb.org/mongo-driver/bson"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -141,6 +143,10 @@ func (params UpdateTimespendParams) Validate() map[string]string {
 	return errors
 }
 
+func (params UpdateTimespendParams) ToBsonDoc() (*bson.D, error) {
+	return utils.ToBsonDoc(params)
+}
+
 type Timespend struct {
 	ID       string        `bson:"_id,omitempty" json:"id,omitempty"`
 	OwnerID  string        `bson:"ownerid,omitempty" json:"ownerid,omitempty"`
@@ -189,6 +195,10 @@ func (params UpdateMoneyspendParams) Validate() map[string]string {
 		errors["money"] = "money should be more positive number"
 	}
 	return errors
+}
+
+func (params UpdateMoneyspendParams) ToBsonDoc() (*bson.D, error) {
+	return utils.ToBsonDoc(params)
 }
 
 type Moneyspend struct {

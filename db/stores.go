@@ -36,6 +36,17 @@ type TimespendStore interface {
 	UpdateTimespend(ctx context.Context, ownerid, id string, params types.UpdateTimespendParams) error
 }
 
+type MoneyspendStore interface {
+	Dropper
+
+	GetAllMonies(ctx context.Context, ownerID string) ([]types.Moneyspend, error)
+
+	CreateMoneyspend(ctx context.Context, moneyspend types.Moneyspend) (string, error)
+	GetMoneyspendByID(ctx context.Context, ownerid, id string) (types.Moneyspend, error)
+	DeleteMoneyspend(ctx context.Context, ownerid, id string) error
+	UpdateMoneyspend(ctx context.Context, ownerid, id string, params types.UpdateMoneyspendParams) error
+}
+
 func ToObjectID(id string) primitive.ObjectID {
 	oid, err := primitive.ObjectIDFromHex(id)
 	if err != nil {
@@ -182,6 +193,78 @@ func (st MongoTimespendStore) DeleteTimespend(ctx context.Context, ownerid, id s
 }
 
 func (st MongoTimespendStore) UpdateTimespend(ctx context.Context, ownerid, id string, params types.UpdateTimespendParams) error {
+	paramsBson, err := toBsonDoc(params)
+	if err != nil {
+		return err
+	}
+	res, err := st.coll.UpdateOne(ctx, bson.M{"_id": ToObjectID(id), "ownerid": ownerid}, bson.D{{Key: "$set", Value: paramsBson}})
+	if err != nil {
+		return err
+	}
+	if res.MatchedCount <= 0 {
+		return fmt.Errorf("can't update timespend with id: %s", id)
+	}
+	if res.ModifiedCount <= 0 {
+		return fmt.Errorf("no changes timespend with id: %s", id)
+	}
+	return nil
+}
+
+type MongoMoneyspendStore struct {
+	coll *mongo.Collection
+}
+
+func NewMongoMoneyspendStore(cl *mongo.Client, dbname, timespendColl string) *MongoMoneyspendStore {
+	return &MongoMoneyspendStore{
+		coll: cl.Database(dbname).Collection(timespendColl),
+	}
+}
+
+func (st MongoMoneyspendStore) Drop(ctx context.Context) error {
+	return st.coll.Drop(ctx)
+}
+
+func (st MongoMoneyspendStore) GetAllMonies(ctx context.Context, ownerID string) ([]types.Moneyspend, error) {
+	cur, err := st.coll.Find(ctx, bson.M{"ownerid": ownerID})
+	if err != nil {
+		return nil, err
+	}
+	monies := []types.Moneyspend{}
+	err = cur.All(ctx, &monies)
+	if err != nil {
+		return nil, err
+	}
+	return monies, nil
+}
+
+func (st MongoMoneyspendStore) CreateMoneyspend(ctx context.Context, moneyspend types.Moneyspend) (string, error) {
+	res, err := st.coll.InsertOne(ctx, moneyspend)
+	if err != nil {
+		return "", err
+	}
+	return res.InsertedID.(primitive.ObjectID).Hex(), nil
+}
+
+func (st MongoMoneyspendStore) GetMoneyspendByID(ctx context.Context, ownerid, id string) (types.Moneyspend, error) {
+	var moneyspend types.Moneyspend
+	if err := st.coll.FindOne(ctx, bson.M{"_id": ToObjectID(id), "ownerid": ownerid}).Decode(&moneyspend); err != nil {
+		return types.Moneyspend{}, err
+	}
+	return moneyspend, nil
+}
+
+func (st MongoMoneyspendStore) DeleteMoneyspend(ctx context.Context, ownerid, id string) error {
+	res, err := st.coll.DeleteOne(ctx, bson.M{"_id": ToObjectID(id), "ownerid": ownerid})
+	if err != nil {
+		return err
+	}
+	if res.DeletedCount <= 0 {
+		return fmt.Errorf("can't delete timepend with id: %s", id)
+	}
+	return nil
+}
+
+func (st MongoMoneyspendStore) UpdateMoneyspend(ctx context.Context, ownerid, id string, params types.UpdateMoneyspendParams) error {
 	paramsBson, err := toBsonDoc(params)
 	if err != nil {
 		return err

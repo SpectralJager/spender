@@ -133,7 +133,7 @@ type UpdateTimespendParams struct {
 func (params UpdateTimespendParams) Validate() map[string]string {
 	errors := map[string]string{}
 	if params.Date.IsZero() {
-		errors["date"] = "date should be zero"
+		errors["date"] = "date should be not zero"
 	}
 	if params.Duration < time.Second {
 		errors["duration"] = "duration should be more then 1 second"
@@ -154,5 +154,55 @@ func NewTimespendFromParams(params CreateTimespendParams) Timespend {
 		Duration: params.Duration,
 		Date:     params.Date,
 		Note:     params.Note,
+	}
+}
+
+type CreateMoneyspendParams struct {
+	Money float64   `json:"money"`
+	Note  string    `json:"note"`
+	Date  time.Time `json:"date"`
+}
+
+func (params CreateMoneyspendParams) Validate() map[string]string {
+	errors := map[string]string{}
+	if params.Date.IsZero() {
+		errors["date"] = "date should be not zero"
+	}
+	if params.Money <= 0 {
+		errors["money"] = "money should be more then 0"
+	}
+	return errors
+}
+
+type UpdateMoneyspendParams struct {
+	Money float64   `bson:"money,omitempty" json:"money"`
+	Date  time.Time `bson:"date,omitempty" json:"date"`
+	Note  string    `bson:"note,omitempty" json:"note"`
+}
+
+func (params UpdateMoneyspendParams) Validate() map[string]string {
+	errors := map[string]string{}
+	if params.Date.IsZero() {
+		errors["date"] = "date should be zero"
+	}
+	if params.Money < 0 {
+		errors["money"] = "money should be more positive number"
+	}
+	return errors
+}
+
+type Moneyspend struct {
+	ID      string    `bson:"_id,omitempty" json:"id,omitempty"`
+	OwnerID string    `bson:"ownerid,omitempty" json:"ownerid,omitempty"`
+	Money   float64   `bson:"money" json:"money"`
+	Date    time.Time `bson:"date" json:"date"`
+	Note    string    `bson:"note" json:"note"`
+}
+
+func NewMoneyspendFromParams(params CreateMoneyspendParams) Moneyspend {
+	return Moneyspend{
+		Money: params.Money,
+		Date:  params.Date,
+		Note:  params.Note,
 	}
 }

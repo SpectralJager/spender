@@ -88,18 +88,18 @@ func (h UserHandler) PutUser(ctx echo.Context) error {
 }
 
 type TimespendHandler struct {
-	ts db.TimespendStore
+	timespendStore db.TimespendStore
 }
 
-func NewTimespendHandler(store db.TimespendStore) *TimespendHandler {
+func NewTimespendHandler(timespendStore db.TimespendStore) *TimespendHandler {
 	return &TimespendHandler{
-		ts: store,
+		timespendStore: timespendStore,
 	}
 }
 
 func (h TimespendHandler) GetAllTimes(ctx echo.Context) error {
 	ownerID := ctx.Request().Header.Get("ownerid")
-	times, err := h.ts.GetAllTimes(context.TODO(), ownerID)
+	times, err := h.timespendStore.GetAllTimes(context.TODO(), ownerID)
 	if err != nil {
 		return ctx.JSON(http.StatusInternalServerError, echo.Map{"error": err.Error()})
 	}
@@ -117,7 +117,7 @@ func (h TimespendHandler) PostTimespend(ctx echo.Context) error {
 	}
 	timespend := types.NewTimespendFromParams(params)
 	timespend.OwnerID = ownerID
-	id, err := h.ts.CreateTimespend(context.TODO(), timespend)
+	id, err := h.timespendStore.CreateTimespend(context.TODO(), timespend)
 	if err != nil {
 		return ctx.JSON(http.StatusInternalServerError, echo.Map{"error": err.Error()})
 	}
@@ -127,7 +127,7 @@ func (h TimespendHandler) PostTimespend(ctx echo.Context) error {
 func (h TimespendHandler) GetTimespend(ctx echo.Context) error {
 	ownerID := ctx.Request().Header.Get("ownerid")
 	id := ctx.Param("id")
-	timespend, err := h.ts.GetTimespendByID(context.TODO(), ownerID, id)
+	timespend, err := h.timespendStore.GetTimespendByID(context.TODO(), ownerID, id)
 	if err != nil {
 		return ctx.JSON(http.StatusInternalServerError, echo.Map{"error": err.Error()})
 	}
@@ -144,7 +144,7 @@ func (h TimespendHandler) PutTimespend(ctx echo.Context) error {
 	if errs := params.Validate(); len(errs) != 0 {
 		return ctx.JSON(http.StatusInternalServerError, echo.Map{"validationErrors": errs})
 	}
-	err = h.ts.UpdateTimespend(context.TODO(), ownerID, id, params)
+	err = h.timespendStore.UpdateTimespend(context.TODO(), ownerID, id, params)
 	if err != nil {
 		return ctx.JSON(http.StatusInternalServerError, echo.Map{"error": err.Error()})
 	}
@@ -154,7 +154,82 @@ func (h TimespendHandler) PutTimespend(ctx echo.Context) error {
 func (h TimespendHandler) DeleteTimespend(ctx echo.Context) error {
 	ownerID := ctx.Request().Header.Get("ownerid")
 	id := ctx.Param("id")
-	err := h.ts.DeleteTimespend(context.TODO(), ownerID, id)
+	err := h.timespendStore.DeleteTimespend(context.TODO(), ownerID, id)
+	if err != nil {
+		return ctx.JSON(http.StatusInternalServerError, echo.Map{"error": err.Error()})
+	}
+	return ctx.JSON(http.StatusOK, echo.Map{"resutl": "done", "id": id})
+
+}
+
+type MoneyspendHandler struct {
+	moneyspendStore db.MoneyspendStore
+}
+
+func NewMoneyspendHandler(moneyspendStore db.MoneyspendStore) *MoneyspendHandler {
+	return &MoneyspendHandler{
+		moneyspendStore: moneyspendStore,
+	}
+}
+
+func (h MoneyspendHandler) GetAllMonies(ctx echo.Context) error {
+	ownerID := ctx.Request().Header.Get("ownerid")
+	monies, err := h.moneyspendStore.GetAllMonies(context.TODO(), ownerID)
+	if err != nil {
+		return ctx.JSON(http.StatusInternalServerError, echo.Map{"error": err.Error()})
+	}
+	return ctx.JSON(http.StatusOK, echo.Map{"monies": monies})
+}
+
+func (h MoneyspendHandler) PostMoneyspend(ctx echo.Context) error {
+	ownerID := ctx.Request().Header.Get("ownerid")
+	params, err := DecodeBody[types.CreateMoneyspendParams](ctx.Request().Body)
+	if err != nil {
+		return ctx.JSON(http.StatusInternalServerError, echo.Map{"error": err.Error()})
+	}
+	if errs := params.Validate(); len(errs) != 0 {
+		return ctx.JSON(http.StatusInternalServerError, echo.Map{"validationErrors": errs})
+	}
+	moneyspend := types.NewMoneyspendFromParams(params)
+	moneyspend.OwnerID = ownerID
+	id, err := h.moneyspendStore.CreateMoneyspend(context.TODO(), moneyspend)
+	if err != nil {
+		return ctx.JSON(http.StatusInternalServerError, echo.Map{"error": err.Error()})
+	}
+	return ctx.JSON(http.StatusOK, echo.Map{"resutl": "done", "id": id})
+}
+
+func (h MoneyspendHandler) GetMoneyspend(ctx echo.Context) error {
+	ownerID := ctx.Request().Header.Get("ownerid")
+	id := ctx.Param("id")
+	moneyspend, err := h.moneyspendStore.GetMoneyspendByID(context.TODO(), ownerID, id)
+	if err != nil {
+		return ctx.JSON(http.StatusInternalServerError, echo.Map{"error": err.Error()})
+	}
+	return ctx.JSON(http.StatusOK, echo.Map{"money": moneyspend})
+}
+
+func (h MoneyspendHandler) PutMoneyspend(ctx echo.Context) error {
+	ownerID := ctx.Request().Header.Get("ownerid")
+	id := ctx.Param("id")
+	params, err := DecodeBody[types.UpdateMoneyspendParams](ctx.Request().Body)
+	if err != nil {
+		return ctx.JSON(http.StatusInternalServerError, echo.Map{"error": err.Error()})
+	}
+	if errs := params.Validate(); len(errs) != 0 {
+		return ctx.JSON(http.StatusInternalServerError, echo.Map{"validationErrors": errs})
+	}
+	err = h.moneyspendStore.UpdateMoneyspend(context.TODO(), ownerID, id, params)
+	if err != nil {
+		return ctx.JSON(http.StatusInternalServerError, echo.Map{"error": err.Error()})
+	}
+	return ctx.JSON(http.StatusOK, echo.Map{"resutl": "done", "id": id})
+}
+
+func (h MoneyspendHandler) DeleteMoneyspend(ctx echo.Context) error {
+	ownerID := ctx.Request().Header.Get("ownerid")
+	id := ctx.Param("id")
+	err := h.moneyspendStore.DeleteMoneyspend(context.TODO(), ownerID, id)
 	if err != nil {
 		return ctx.JSON(http.StatusInternalServerError, echo.Map{"error": err.Error()})
 	}

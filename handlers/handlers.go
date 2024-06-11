@@ -1,8 +1,11 @@
 package handlers
 
 import (
+	"cmp"
 	"context"
 	"net/http"
+	"slices"
+	"time"
 
 	"github.com/SpectralJager/spender/db"
 	"github.com/SpectralJager/spender/types"
@@ -14,6 +17,12 @@ type ctxKey string
 
 const (
 	ownerIDKey = ctxKey("ownerID")
+)
+
+const (
+	dateLayout = "2006-01-02"
+	orderASC   = "asc"
+	orderDESC  = "desc"
 )
 
 type UserHandler struct {
@@ -243,4 +252,166 @@ func (h MoneyspendHandler) DeleteMoneyspend(ctx echo.Context) error {
 	}
 	return ctx.JSON(http.StatusOK, echo.Map{"resutl": "done", "id": id})
 
+}
+
+type ReportHandler struct {
+	timespendStore  db.MongoTimespendStore
+	moneyspendStore db.MongoMoneyspendStore
+}
+
+func NewReportHandler(timespendStore db.MongoTimespendStore, moneyspendStore db.MongoMoneyspendStore) *ReportHandler {
+	return &ReportHandler{
+		timespendStore:  timespendStore,
+		moneyspendStore: moneyspendStore,
+	}
+}
+
+func (h ReportHandler) GetTotalSpend(ctx echo.Context) error {
+	ownerID := ctx.Request().Header.Get("ownerid")
+	c := context.WithValue(context.Background(), ownerIDKey, ownerID)
+
+	times, err := h.timespendStore.GetAll(c)
+	if err != nil {
+		return ctx.JSON(http.StatusInternalServerError, echo.Map{"error": err.Error()})
+	}
+	monies, err := h.moneyspendStore.GetAll(c)
+	if err != nil {
+		return ctx.JSON(http.StatusInternalServerError, echo.Map{"error": err.Error()})
+	}
+
+	start := ctx.QueryParam("start")
+	end := ctx.QueryParam("end")
+	if len(start) != 0 && len(end) != 0 {
+		dateStart, err := time.Parse(time.DateOnly, start)
+		if err != nil {
+			return ctx.JSON(http.StatusInternalServerError, echo.Map{"error": err.Error()})
+		}
+
+		dateEnd, err := time.Parse(time.DateOnly, end)
+		if err != nil {
+			return ctx.JSON(http.StatusInternalServerError, echo.Map{"error": err.Error()})
+		}
+
+		times = utils.Map(times, func(timespend types.Timespend) bool {
+			return timespend.Date.After(dateStart) && timespend.Date.Before(dateEnd)
+		})
+		monies = utils.Map(monies, func(moneyspend types.Moneyspend) bool {
+			return moneyspend.Date.After(dateStart) && moneyspend.Date.Before(dateEnd)
+		})
+	}
+
+	totalTime := types.Timespend{
+		OwnerID: ownerID,
+	}
+	for _, time := range times {
+		totalTime.Duration += time.Duration
+	}
+
+	totalMoney := types.Moneyspend{
+		OwnerID: ownerID,
+	}
+	for _, money := range monies {
+		totalMoney.Money += money.Money
+	}
+
+	return ctx.JSON(http.StatusOK, echo.Map{
+		"timespend":  totalTime,
+		"moneyspend": totalMoney,
+	})
+}
+
+func (h ReportHandler) GetMoneyspends(ctx echo.Context) error {
+	ownerID := ctx.Request().Header.Get("ownerid")
+	c := context.WithValue(context.Background(), ownerIDKey, ownerID)
+
+	monies, err := h.moneyspendStore.GetAll(c)
+	if err != nil {
+		return ctx.JSON(http.StatusInternalServerError, echo.Map{"error": err.Error()})
+	}
+
+	start := ctx.QueryParam("start")
+	end := ctx.QueryParam("end")
+	if len(start) != 0 && len(end) != 0 {
+		dateStart, err := time.Parse(time.DateOnly, start)
+		if err != nil {
+			return ctx.JSON(http.StatusInternalServerError, echo.Map{"error": err.Error()})
+		}
+
+		dateEnd, err := time.Parse(time.DateOnly, end)
+		if err != nil {
+			return ctx.JSON(http.StatusInternalServerError, echo.Map{"error": err.Error()})
+		}
+
+		monies = utils.Map(monies, func(moneyspend types.Moneyspend) bool {
+			return moneyspend.Date.After(dateStart) && moneyspend.Date.Before(dateEnd)
+		})
+	}
+
+	order := ctx.QueryParam("order")
+	if len(order) != 0 {
+		switch order {
+		case orderASC:
+			slices.SortFunc(monies, func(a, b types.Moneyspend) int {
+				return cmp.Compare(a.Money, b.Money)
+			})
+		case orderDESC:
+			slices.SortFunc(monies, func(a, b types.Moneyspend) int {
+				return cmp.Compare(b.Money, a.Money)
+			})
+		default:
+			return ctx.JSON(http.StatusInternalServerError, echo.Map{"error": "wrong value of argument 'order'"})
+		}
+	}
+
+	return ctx.JSON(http.StatusOK, echo.Map{
+		"moneyspends": monies,
+	})
+}
+
+func (h ReportHandler) GetTimespends(ctx echo.Context) error {
+	ownerID := ctx.Request().Header.Get("ownerid")
+	c := context.WithValue(context.Background(), ownerIDKey, ownerID)
+
+	times, err := h.timespendStore.GetAll(c)
+	if err != nil {
+		return ctx.JSON(http.StatusInternalServerError, echo.Map{"error": err.Error()})
+	}
+
+	start := ctx.QueryParam("start")
+	end := ctx.QueryParam("end")
+	if len(start) != 0 && len(end) != 0 {
+		dateStart, err := time.Parse(time.DateOnly, start)
+		if err != nil {
+			return ctx.JSON(http.StatusInternalServerError, echo.Map{"error": err.Error()})
+		}
+
+		dateEnd, err := time.Parse(time.DateOnly, end)
+		if err != nil {
+			return ctx.JSON(http.StatusInternalServerError, echo.Map{"error": err.Error()})
+		}
+
+		times = utils.Map(times, func(timespend types.Timespend) bool {
+			return timespend.Date.After(dateStart) && timespend.Date.Before(dateEnd)
+		})
+	}
+
+	order := ctx.QueryParam("order")
+	if len(order) != 0 {
+		switch order {
+		case orderASC:
+			slices.SortFunc(times, func(a, b types.Timespend) int {
+				return cmp.Compare(a.Duration, b.Duration)
+			})
+		case orderDESC:
+			slices.SortFunc(times, func(a, b types.Timespend) int {
+				return cmp.Compare(b.Duration, a.Duration)
+			})
+		default:
+			return ctx.JSON(http.StatusInternalServerError, echo.Map{"error": "wrong value of argument 'order'"})
+		}
+	}
+
+	return ctx.JSON(http.StatusOK, echo.Map{
+		"timespends": times,
+	})
 }

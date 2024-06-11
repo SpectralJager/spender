@@ -39,3 +39,13 @@ func DecodeBody[T any](r io.Reader) (T, error) {
 	err := json.NewDecoder(r).Decode(&content)
 	return content, err
 }
+
+func Map[T any](entities []T, mapper func(T) bool) []T {
+	var resultEntities []T
+	for _, entity := range entities {
+		if mapper(entity) {
+			resultEntities = append(resultEntities, entity)
+		}
+	}
+	return resultEntities
+}

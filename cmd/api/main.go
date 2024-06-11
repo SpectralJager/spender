@@ -34,9 +34,14 @@ func main() {
 	}
 	defer client.Disconnect(ctx)
 
-	userHandler := handlers.NewUserHandler(db.NewMongoUserStore(client, DBNAME, USERCOLL))
-	timespendHandler := handlers.NewTimespendHandler(db.NewMongoTimespendStore(client, DBNAME, TIMESPENDCOLL))
-	moneyspendHandler := handlers.NewMoneyspendHandler(db.NewMongoMoneyspendStore(client, DBNAME, MONEYSPENDCOLL))
+	userStore := db.NewMongoUserStore(client, DBNAME, USERCOLL)
+	timespendStore := db.NewMongoTimespendStore(client, DBNAME, TIMESPENDCOLL)
+	moneyspendStore := db.NewMongoMoneyspendStore(client, DBNAME, MONEYSPENDCOLL)
+
+	userHandler := handlers.NewUserHandler(userStore)
+	timespendHandler := handlers.NewTimespendHandler(timespendStore)
+	moneyspendHandler := handlers.NewMoneyspendHandler(moneyspendStore)
+	reportHandler := handlers.NewReportHandler(timespendStore, moneyspendStore)
 
 	app := echo.New()
 	apiv1 := app.Group("/api/v1", middleware.Logger())
@@ -58,6 +63,10 @@ func main() {
 	apiv1.GET("/moneyspend/:id", moneyspendHandler.GetMoneyspend)
 	apiv1.PUT("/moneyspend/:id", moneyspendHandler.PutMoneyspend)
 	apiv1.DELETE("/moneyspend/:id", moneyspendHandler.DeleteMoneyspend)
+	// Report api
+	apiv1.GET("/report/total", reportHandler.GetTotalSpend)
+	apiv1.GET("/report/moneyspend", reportHandler.GetMoneyspends)
+	apiv1.GET("/report/timespend", reportHandler.GetTimespends)
 
 	if err := app.Start(*listenAddr); err != nil {
 		log.Fatalf("something goes wrong -> %v", err)

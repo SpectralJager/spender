@@ -7,8 +7,8 @@ import (
 
 	"github.com/SpectralJager/spender/db"
 	"github.com/SpectralJager/spender/handlers"
+	"github.com/SpectralJager/spender/middleware"
 	"github.com/labstack/echo/v4"
-	"github.com/labstack/echo/v4/middleware"
 
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
@@ -38,35 +38,40 @@ func main() {
 	timespendStore := db.NewMongoTimespendStore(client, DBNAME, TIMESPENDCOLL)
 	moneyspendStore := db.NewMongoMoneyspendStore(client, DBNAME, MONEYSPENDCOLL)
 
+	authHandler := handlers.NewAuthHandler(userStore)
 	userHandler := handlers.NewUserHandler(userStore)
 	timespendHandler := handlers.NewTimespendHandler(timespendStore)
 	moneyspendHandler := handlers.NewMoneyspendHandler(moneyspendStore)
 	reportHandler := handlers.NewReportHandler(timespendStore, moneyspendStore)
 
 	app := echo.New()
-	apiv1 := app.Group("/api/v1", middleware.Logger())
+	apiv1 := app.Group("/api/v1")
+	// Authentication api
+	authApi := apiv1.Group("/auth")
+	authApi.POST("/login", authHandler.Authenticate)
+	authApi.POST("/register", userHandler.Register)
 	// User api
-	apiv1.GET("/user", userHandler.GetUsers)
-	apiv1.POST("/user", userHandler.PostUser)
-	apiv1.GET("/user/:id", userHandler.GetUser)
-	apiv1.PUT("/user/:id", userHandler.PutUser)
-	apiv1.DELETE("/user/:id", userHandler.DeleteUser)
+	userApi := apiv1.Group("/user", middleware.JWTAuthentication)
+	userApi.GET("", userHandler.GetUser)
+	userApi.PUT("", userHandler.PutUser)
+	userApi.DELETE("", userHandler.DeleteUser)
 	// Timespend api
-	apiv1.GET("/timespend", timespendHandler.GetAllTimes)
-	apiv1.POST("/timespend", timespendHandler.PostTimespend)
-	apiv1.GET("/timespend/:id", timespendHandler.GetTimespend)
-	apiv1.PUT("/timespend/:id", timespendHandler.PutTimespend)
-	apiv1.DELETE("/timespend/:id", timespendHandler.DeleteTimespend)
+	timespendApi := apiv1.Group("/timespend", middleware.JWTAuthentication)
+	timespendApi.GET("", timespendHandler.GetAllTimes)
+	timespendApi.POST("", timespendHandler.PostTimespend)
+	timespendApi.GET("/:id", timespendHandler.GetTimespend)
+	timespendApi.PUT("/:id", timespendHandler.PutTimespend)
+	timespendApi.DELETE("/:id", timespendHandler.DeleteTimespend)
 	// Moneyspend api
-	apiv1.GET("/moneyspend", moneyspendHandler.GetAllMonies)
-	apiv1.POST("/moneyspend", moneyspendHandler.PostMoneyspend)
-	apiv1.GET("/moneyspend/:id", moneyspendHandler.GetMoneyspend)
-	apiv1.PUT("/moneyspend/:id", moneyspendHandler.PutMoneyspend)
-	apiv1.DELETE("/moneyspend/:id", moneyspendHandler.DeleteMoneyspend)
+	moneyspendApi := apiv1.Group("/moneyspend", middleware.JWTAuthentication)
+	moneyspendApi.GET("", moneyspendHandler.GetAllMonies)
+	moneyspendApi.POST("", moneyspendHandler.PostMoneyspend)
+	moneyspendApi.GET("/:id", moneyspendHandler.GetMoneyspend)
+	moneyspendApi.PUT("/:id", moneyspendHandler.PutMoneyspend)
+	moneyspendApi.DELETE("/:id", moneyspendHandler.DeleteMoneyspend)
 	// Report api
-	apiv1.GET("/report/total", reportHandler.GetTotalSpend)
-	apiv1.GET("/report/moneyspend", reportHandler.GetMoneyspends)
-	apiv1.GET("/report/timespend", reportHandler.GetTimespends)
+	reportApi := apiv1.Group("/report", middleware.JWTAuthentication)
+	reportApi.GET("/total", reportHandler.GetTotalSpend)
 
 	if err := app.Start(*listenAddr); err != nil {
 		log.Fatalf("something goes wrong -> %v", err)

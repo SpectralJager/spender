@@ -47,38 +47,38 @@ type BaseCRUDStore[T any] interface {
 }
 
 type DefaultMongoStore[T any] struct {
-	defaultMongoDropStore
-	defaultMongoAllGetStore[T]
-	defaultMongoGetStore[T]
-	defaultMongoCreateStore[T]
-	defaultMongoUpdateStore
-	defaultMongoDeleteStore
+	DefaultMongoDropStore
+	DefaultMongoAllGetStore[T]
+	DefaultMongoGetStore[T]
+	DefaultMongoCreateStore[T]
+	DefaultMongoUpdateStore
+	DefaultMongoDeleteStore
 }
 
 func NewDefaultMongoStore[T any](coll *mongo.Collection) DefaultMongoStore[T] {
 	return DefaultMongoStore[T]{
-		defaultMongoDropStore:   defaultMongoDropStore{coll},
-		defaultMongoAllGetStore: defaultMongoAllGetStore[T]{coll},
-		defaultMongoGetStore:    defaultMongoGetStore[T]{coll},
-		defaultMongoCreateStore: defaultMongoCreateStore[T]{coll},
-		defaultMongoUpdateStore: defaultMongoUpdateStore{coll},
-		defaultMongoDeleteStore: defaultMongoDeleteStore{coll},
+		DefaultMongoDropStore:   DefaultMongoDropStore{coll},
+		DefaultMongoAllGetStore: DefaultMongoAllGetStore[T]{coll},
+		DefaultMongoGetStore:    DefaultMongoGetStore[T]{coll},
+		DefaultMongoCreateStore: DefaultMongoCreateStore[T]{coll},
+		DefaultMongoUpdateStore: DefaultMongoUpdateStore{coll},
+		DefaultMongoDeleteStore: DefaultMongoDeleteStore{coll},
 	}
 }
 
-type defaultMongoDropStore struct {
+type DefaultMongoDropStore struct {
 	coll *mongo.Collection
 }
 
-func (st defaultMongoDropStore) Drop(ctx context.Context) error {
+func (st DefaultMongoDropStore) Drop(ctx context.Context) error {
 	return st.coll.Drop(ctx)
 }
 
-type defaultMongoAllGetStore[T any] struct {
+type DefaultMongoAllGetStore[T any] struct {
 	coll *mongo.Collection
 }
 
-func (st defaultMongoAllGetStore[T]) GetAll(ctx context.Context) ([]T, error) {
+func (st DefaultMongoAllGetStore[T]) GetAll(ctx context.Context) ([]T, error) {
 	filter := bson.M{}
 	if ctxOwnerID, ok := ctx.Value("ownerID").(string); ok {
 		filter["ownerid"] = ctxOwnerID
@@ -95,11 +95,11 @@ func (st defaultMongoAllGetStore[T]) GetAll(ctx context.Context) ([]T, error) {
 	return entities, nil
 }
 
-type defaultMongoGetStore[T any] struct {
+type DefaultMongoGetStore[T any] struct {
 	coll *mongo.Collection
 }
 
-func (st defaultMongoGetStore[T]) GetByID(ctx context.Context, id string) (T, error) {
+func (st DefaultMongoGetStore[T]) GetByID(ctx context.Context, id string) (T, error) {
 	var entity T
 	filter := bson.M{}
 	filter["_id"] = utils.ToObjectID(id)
@@ -110,11 +110,11 @@ func (st defaultMongoGetStore[T]) GetByID(ctx context.Context, id string) (T, er
 	return entity, err
 }
 
-type defaultMongoCreateStore[T any] struct {
+type DefaultMongoCreateStore[T any] struct {
 	coll *mongo.Collection
 }
 
-func (st defaultMongoCreateStore[T]) Create(ctx context.Context, newEntity T) (string, error) {
+func (st DefaultMongoCreateStore[T]) Create(ctx context.Context, newEntity T) (string, error) {
 	res, err := st.coll.InsertOne(ctx, newEntity)
 	if err != nil {
 		return "", err
@@ -122,11 +122,11 @@ func (st defaultMongoCreateStore[T]) Create(ctx context.Context, newEntity T) (s
 	return res.InsertedID.(primitive.ObjectID).Hex(), nil
 }
 
-type defaultMongoUpdateStore struct {
+type DefaultMongoUpdateStore struct {
 	coll *mongo.Collection
 }
 
-func (st defaultMongoUpdateStore) Update(ctx context.Context, id string, updater Updater) error {
+func (st DefaultMongoUpdateStore) Update(ctx context.Context, id string, updater Updater) error {
 	entityBson, err := updater.ToBsonDoc()
 	if err != nil {
 		return err
@@ -146,11 +146,11 @@ func (st defaultMongoUpdateStore) Update(ctx context.Context, id string, updater
 	return nil
 }
 
-type defaultMongoDeleteStore struct {
+type DefaultMongoDeleteStore struct {
 	coll *mongo.Collection
 }
 
-func (st defaultMongoDeleteStore) Delete(ctx context.Context, id string) error {
+func (st DefaultMongoDeleteStore) Delete(ctx context.Context, id string) error {
 	filter := bson.M{}
 	filter["_id"] = utils.ToObjectID(id)
 	if ctxOwnerID, ok := ctx.Value("ownerID").(string); ok {

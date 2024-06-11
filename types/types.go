@@ -215,3 +215,8 @@ func NewMoneyspendFromParams(params CreateMoneyspendParams) Moneyspend {
 		Note:  params.Note,
 	}
 }
+
+type AuthCredentials struct {
+	Email    string `json:"email"`
+	Password string `json:"password"`
+}

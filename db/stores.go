@@ -1,13 +1,21 @@
 package db
 
 import (
+	"context"
+
 	"github.com/SpectralJager/spender/types"
+	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
 type UserStore interface {
 	Dropper
-	BaseCRUDStore[types.User]
+	GetStorer[types.User]
+	CreateStorer[types.User]
+	DeleteStorer
+	UpdateStorer
+
+	GetByEmail(ctx context.Context, email string) (types.User, error)
 }
 
 type SpendStor[T any] interface {
@@ -15,15 +23,34 @@ type SpendStor[T any] interface {
 }
 
 type MongoUserStore struct {
-	DefaultMongoStore[types.User]
+	DefaultMongoDropStore
+	DefaultMongoGetStore[types.User]
+	DefaultMongoCreateStore[types.User]
+	DefaultMongoUpdateStore
+	DefaultMongoDeleteStore
+	coll *mongo.Collection
 }
 
 func NewMongoUserStore(cl *mongo.Client, dbname, collname string) *MongoUserStore {
+	coll := cl.Database(dbname).Collection(collname)
 	return &MongoUserStore{
-		DefaultMongoStore: NewDefaultMongoStore[types.User](
-			cl.Database(dbname).Collection(collname),
-		),
+		DefaultMongoDropStore:   DefaultMongoDropStore{coll},
+		DefaultMongoGetStore:    DefaultMongoGetStore[types.User]{coll},
+		DefaultMongoCreateStore: DefaultMongoCreateStore[types.User]{coll},
+		DefaultMongoUpdateStore: DefaultMongoUpdateStore{coll},
+		DefaultMongoDeleteStore: DefaultMongoDeleteStore{coll},
+		coll:                    coll,
 	}
+}
+
+func (st MongoUserStore) GetByEmail(ctx context.Context, email string) (types.User, error) {
+	res := st.coll.FindOne(ctx, bson.M{"email": email})
+	var user types.User
+	err := res.Decode(&user)
+	if err != nil {
+		return types.User{}, err
+	}
+	return user, nil
 }
 
 type MongoTimespendStore struct {
